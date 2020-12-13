@@ -141,6 +141,17 @@ namespace Ultz.DF2
                     value.UpdateValue(val.Kind, ReadValue(val.Kind, out _));
                     break;
                 }
+                case Command.GroupByHandle:
+                {
+                    var val = _stream.Handles[_stream.BaseReader.ReadDf2UInt()];
+                    if (val is not Group value)
+                    {
+                        throw new InvalidOperationException("Can only set a value of a handle referring to a value");
+                    }
+
+                    _stream.InboundCurrentGroup = value;
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException();
             }

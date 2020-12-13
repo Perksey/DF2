@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Ultz.DF2
 {
-    public class Group : IValue, IValueInternal, INotifyPropertyChanged
+    public class Group : IValue, IValueInternal, INotifyPropertyChanged, IGroup, IGroupInternal
     {
         private object _parent;
         private string _name;
@@ -43,5 +43,23 @@ namespace Ultz.DF2
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+
+        Df2Stream IGroupInternal.GetStream()
+        {
+            var parent = _parent;
+            while (true)
+            {
+                switch (parent)
+                {
+                    case Group group:
+                        parent = @group._parent;
+                        break;
+                    case Df2Stream stream:
+                        return stream;
+                    default:
+                        throw new InvalidOperationException("Parent is not a group or stream");
+                }
+            }
+        }
     }
 }

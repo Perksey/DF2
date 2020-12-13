@@ -9,7 +9,7 @@ namespace Ultz.DF2
     /// <summary>
     /// Represents a bidirectional stream capable of transmitting and receiving DF2 data.
     /// </summary>
-    public class Df2Stream : IDisposable
+    public class Df2Stream : IDisposable, IGroup, IGroupInternal
     {
         public Df2Stream(Stream @base)
         {
@@ -22,15 +22,18 @@ namespace Ultz.DF2
             {
                 BaseWriter = new BinaryWriter(@base, Encoding.UTF8, true);
             }
+
+            Receiver = new CommandReceiver(this);
         }
         
         public BinaryReader? BaseReader { get; }
         public BinaryWriter? BaseWriter { get; }
         public bool HasReceivedEnd { get; internal set; }
-        public IValueDictionary Values { get; private set; }
+        public IValueDictionary Values { get; } = new ValueDictionary(x => x.Name);
         public Group? InboundCurrentGroup { get; internal set; }
         public Group? OutboundCurrentGroup { get; private set; }
-        public Dictionary<uint, IValue> Handles { get; private set; }
+        private CommandReceiver Receiver { get; }
+        public IReadOnlyDictionary<uint, IValue> Handles { get; } = new Dictionary<uint, IValue>();
 
         public void Dispose()
         {
@@ -48,9 +51,8 @@ namespace Ultz.DF2
             {
                 throw new InvalidOperationException("Previously received end command, will not read any further.");
             }
-            
 
-            return true;
+            return Receiver.ProcessCommand();
         }
 
         public IValue? GetValue(string absolutePath)
@@ -100,5 +102,7 @@ namespace Ultz.DF2
             BaseWriter?.Close();
             stream?.Close();
         }
+
+        public Df2Stream GetStream() => this;
     }
 }
