@@ -2,6 +2,9 @@
 {
     public interface IValue
     {
-        
+        string Name { get; set; }
+        string AbsolutePath { get; }
+        uint? Handle { get; set; }
+        ValueKind Kind { get; }
     }
 }

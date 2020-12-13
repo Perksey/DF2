@@ -25,19 +25,25 @@
         /// Removes a value within the current group.
         /// 1 operand of type null-terminated string.
         /// </summary>
-        RemoveValue,
+        Remove,
         
         /// <summary>
         /// Assigns a handle to a value using a path of its names. The path may be absolute or relative to the current
         /// group.
         /// 2 operands of types null-terminated string and compressed uint.
         /// </summary>
-        AssignHandle,
+        Handle,
         
         /// <summary>
         /// Edits an existing value by using its assigned handle.
         /// 2 operands of type compressed uint and a value of variable length determined by the created value.
         /// </summary>
-        EditValueByHandle
+        EditValueByHandle,
+        
+        /// <summary>
+        /// Enters a group with the given handle.
+        /// 1 operand of type compressed uint
+        /// </summary>
+        GroupByHandle,
     }
 }

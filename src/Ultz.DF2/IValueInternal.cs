@@ -1,7 +1,7 @@
 ﻿namespace Ultz.DF2
 {
-    public interface IValueInternal
+    internal interface IValueInternal
     {
-        
+        internal void UpdateHandle(uint? handle);
     }
 }
