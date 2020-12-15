@@ -82,7 +82,7 @@ namespace Ultz.DF2
                     }
                     else
                     {
-                        currentDictionary.Add(new Value(parentValue ?? (object) _stream, name, kind,
+                        currentDictionary.Add(new Value((IGroupInternal)parentValue ?? _stream, name, kind,
                             ReadValue(kind, out _)));
                     }
 

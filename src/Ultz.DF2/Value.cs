@@ -4,13 +4,13 @@ namespace Ultz.DF2
 {
     public class Value : IValue, IValueInternal, INotifyPropertyChanged
     {
-        private object _parent;
+        private IGroupInternal _parent;
         private string _name;
         private uint? _handle;
         private object _data;
         private ValueKind _kind;
 
-        public Value(object parent, string name, ValueKind initialKind, object initialValue)
+        internal Value(IGroupInternal parent, string name, ValueKind initialKind, object initialValue)
         {
             _parent = parent;
             _name = name;
@@ -35,7 +35,8 @@ namespace Ultz.DF2
         public uint? Handle
         {
             get => _handle;
-            set => _handle = value;
+            set
+            { _handle = value; }
         }
 
         public ValueKind Kind => _kind;

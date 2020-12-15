@@ -24,6 +24,7 @@ namespace Ultz.DF2
             }
 
             Receiver = new CommandReceiver(this);
+            Sender = new CommandSender(this);
         }
         
         public BinaryReader? BaseReader { get; }
@@ -32,7 +33,8 @@ namespace Ultz.DF2
         public IValueDictionary Values { get; } = new ValueDictionary(x => x.Name);
         public Group? InboundCurrentGroup { get; internal set; }
         public Group? OutboundCurrentGroup { get; private set; }
-        private CommandReceiver Receiver { get; }
+        internal CommandReceiver Receiver { get; }
+        internal CommandSender Sender { get; }
         public IReadOnlyDictionary<uint, IValue> Handles { get; } = new Dictionary<uint, IValue>();
 
         public void Dispose()
