@@ -21,7 +21,9 @@ namespace Ultz.DF2
             0xAB, 0x44, 0x46, 0x32, 0x20, 0x31, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
         };
 
-        public bool IsValid(BinaryReader reader)
+        public static bool IsValid(BinaryReader reader)
             => reader.ReadBytes(RawPreface.Length).SequenceEqual(RawPreface);
+
+        public static void Write(BinaryWriter writer) => writer.Write(RawPreface);
     }
 }

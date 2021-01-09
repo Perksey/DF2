@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -175,10 +177,141 @@ namespace Ultz.DF2
             }
         }
 
+        public static IValue? GetValue(this IGroup @this, string absolutePath)
+        {
+            absolutePath = absolutePath.TrimEnd('/');
+            IValue? ret = null;
+            foreach (var element in absolutePath.Split(new []{'/'}, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (ret is null)
+                {
+                    ret = @this.Values[element];
+                }
+                else
+                {
+                    if (ret is Group group)
+                    {
+                        ret = group.Values[element];
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Attempted to read within a value instead of a group.");
+                    }
+                }
+            }
+
+            return ret;
+        }
+
         public static void WriteDf2String(this BinaryWriter writer, string value)
         {
             writer.Write(value);
             writer.Write((byte)0x00);
+        }
+
+        private static void AssertValue(IValue o)
+        {
+            if (o is not Value)
+            {
+                throw new ArgumentException($"{o.GetType().Name} is not a Value");
+            }
+        }
+
+        private static void AssertKind(ValueKind left, ValueKind right)
+        {
+            if (left == right)
+            {
+                throw new DataException($"Attempted to interpret a {left} as a {right}");
+            }
+        }
+        
+        public static byte AsByte(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Byte);
+            return (byte)((Value)value).Data;
+        }
+        public static sbyte AsSByte(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.SByte);
+            return (sbyte)((Value)value).Data;
+        }
+        public static short AsShort(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Short);
+            return (short)((Value)value).Data;
+        }
+        public static ushort AsUShort(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.UShort);
+            return (ushort)((Value)value).Data;
+        }
+        public static int AsInt(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Int);
+            return (int)((Value)value).Data;
+        }
+        public static uint AsUInt(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.UInt);
+            return (uint)((Value)value).Data;
+        }
+        public static long AsLong(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Long);
+            return (long)((Value)value).Data;
+        }
+        public static ulong AsULong(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.ULong);
+            return (ulong)((Value)value).Data;
+        }
+        public static float AsFloat(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Float);
+            return (float)((Value)value).Data;
+        }
+        public static double AsDouble(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Double);
+            return (double)((Value)value).Data;
+        }
+        public static string AsString(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.String);
+            return (string)((Value)value).Data;
+        }
+        public static Group AsGroup(this IValue value)
+        {
+            return (Group) value;
+        }
+        public static T[] AsArray<T>(this IValue value) where T:unmanaged
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.Array);
+            return (T[])((Value)value).Data;
+        }
+        public static IEnumerable AsList(this IValue value)
+        {
+            AssertValue(value);
+            AssertKind(value.Kind, ValueKind.List);
+            return (IEnumerable)((Value)value).Data;
+        }
+
+        public static object GetValue(this IValue value)
+        {
+            AssertValue(value);
+            return ((Value) value).Data;
         }
     }
 }

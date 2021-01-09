@@ -2,6 +2,7 @@
 {
     public enum ValueKind
     {
+        Null,
         Byte,
         SByte,
         Short,

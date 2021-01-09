@@ -30,11 +30,16 @@ namespace Ultz.DF2
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
                     if (string.IsNullOrWhiteSpace(path))
                     {
-                        _stream.InboundCurrentGroup = null;
-                        break;
+                        if (path == string.Empty)
+                        {
+                            _stream.InboundCurrentGroup = null;
+                        }
+                        
+
+                        throw new InvalidOperationException();
                     }
 
-                    var previousPath = Df2Stream.ToPath(Path.GetDirectoryName(path));
+                    var previousPath = new Uri(new Uri(path), ".").ToString();
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -61,11 +66,10 @@ namespace Ultz.DF2
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
                     if (string.IsNullOrWhiteSpace(path))
                     {
-                        _stream.InboundCurrentGroup = null;
-                        break;
+                        throw new InvalidOperationException("Path should not be null or whitespace");
                     }
 
-                    var previousPath = Df2Stream.ToPath(Path.GetDirectoryName(path));
+                    var previousPath = new Uri(new Uri(path), ".").ToString();
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -94,11 +98,10 @@ namespace Ultz.DF2
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
                     if (string.IsNullOrWhiteSpace(path))
                     {
-                        _stream.InboundCurrentGroup = null;
-                        break;
+                        throw new InvalidOperationException("Path should not be null or whitespace");
                     }
 
-                    var previousPath = Df2Stream.ToPath(Path.GetDirectoryName(path));
+                    var previousPath = new Uri(new Uri(path), ".").ToString();
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -117,7 +120,7 @@ namespace Ultz.DF2
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
                     if (string.IsNullOrWhiteSpace(path))
                     {
-                        _stream.InboundCurrentGroup = null;
+                        ((IDictionary<uint, IValue>) _stream.Handles).Remove(_stream.BaseReader.ReadDf2UInt());
                         break;
                     }
 
@@ -164,6 +167,8 @@ namespace Ultz.DF2
             listTerminated = false;
             switch (kind)
             {
+                case ValueKind.Null:
+                    return null;
                 case ValueKind.Byte:
                     return _stream.BaseReader!.ReadByte();
                 case ValueKind.Short:

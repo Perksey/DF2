@@ -19,7 +19,7 @@ namespace Ultz.DF2
         }
         public void SendGroup(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrWhiteSpace(path) && path != string.Empty)
             {
                 throw new ArgumentNullException(nameof(path));
             }
@@ -32,7 +32,7 @@ namespace Ultz.DF2
             => CoreSendValue(name, value, out valueKind);
 
         private void CoreSendValue(string name,
-            object value,
+            object? value,
             out ValueKind valueKind,
             bool commandName = true,
             bool kind = true,
@@ -67,7 +67,8 @@ namespace Ultz.DF2
                 value is not float[] &&
                 value is not double[] &&
                 value is not string[] &&
-                value is not IEnumerable)
+                value is not IEnumerable &&
+                value is not null)
             {
                 throw new ArgumentException(
                     "Value is of an invalid type. Valid types are (or inherit from) byte, sbyte, short, ushort, int, " +
@@ -78,7 +79,7 @@ namespace Ultz.DF2
             if (value is byte byteValue)
             {
                 Assert(forceValue, ValueKind.Byte);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
 
                 if (kind)
                 {
@@ -87,7 +88,7 @@ namespace Ultz.DF2
                 
                 if (commandName)
                 {
-                    _stream.BaseWriter.WriteDf2String(name);
+                    _stream.BaseWriter!.WriteDf2String(name);
                 }
 
                 _stream.BaseWriter!.Write(byteValue);
@@ -95,7 +96,7 @@ namespace Ultz.DF2
             else if (value is sbyte sbyteValue)
             {
                 Assert(forceValue, ValueKind.SByte);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
 
                 if (kind)
                 {
@@ -112,7 +113,7 @@ namespace Ultz.DF2
             else if (value is short shortValue)
             {
                 Assert(forceValue, ValueKind.Short);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -129,7 +130,7 @@ namespace Ultz.DF2
             else if (value is ushort ushortValue)
             {
                 Assert(forceValue, ValueKind.UShort);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -146,7 +147,7 @@ namespace Ultz.DF2
             else if (value is int intValue)
             {
                 Assert(forceValue, ValueKind.Int);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -163,7 +164,7 @@ namespace Ultz.DF2
             else if (value is uint uintValue)
             {
                 Assert(forceValue, ValueKind.UInt);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -180,7 +181,7 @@ namespace Ultz.DF2
             else if (value is long longValue)
             {
                 Assert(forceValue, ValueKind.Long);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
 
                 if (kind)
                 {
@@ -202,7 +203,7 @@ namespace Ultz.DF2
             else if (value is ulong ulongValue)
             {
                 Assert(forceValue, ValueKind.ULong);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -224,7 +225,7 @@ namespace Ultz.DF2
             else if (value is float floatValue)
             {
                 Assert(forceValue, ValueKind.Float);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -244,7 +245,7 @@ namespace Ultz.DF2
             else if (value is double doubleValue)
             {
                 Assert(forceValue, ValueKind.Double);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -266,7 +267,7 @@ namespace Ultz.DF2
             else if (value is string stringValue)
             {
                 Assert(forceValue, ValueKind.String);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -283,7 +284,7 @@ namespace Ultz.DF2
             else if (value is Array arrayValue)
             {
                 Assert(forceValue, ValueKind.Array);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
                 
                 if (kind)
                 {
@@ -321,7 +322,7 @@ namespace Ultz.DF2
             else if (value is IEnumerable enumerableValue)
             {
                 Assert(forceValue, ValueKind.List);
-                WritePreface(_stream, handle, commandName);
+                WriteValueCommand(_stream, handle, commandName);
 
                 if (commandName)
                 {
@@ -335,8 +336,13 @@ namespace Ultz.DF2
 
                 _stream.BaseWriter!.Write((byte) ValueKind.ListTerminator);
             }
+            else
+            {
+                Assert(forceValue, ValueKind.Null);
+                WriteValueCommand(_stream, handle, commandName);
+            }
 
-            static void WritePreface(Df2Stream stream, uint? handle = null, bool commandName = true)
+            static void WriteValueCommand(Df2Stream stream, uint? handle = null, bool commandName = true)
             {
                 if (handle is not null)
                 {

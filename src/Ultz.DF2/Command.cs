@@ -29,7 +29,7 @@
         
         /// <summary>
         /// Assigns a handle to a value using a path of its names. The path may be absolute or relative to the current
-        /// group.
+        /// group. If the first operand is an empty string, the handle is invalidated.
         /// 2 operands of types null-terminated string and compressed uint.
         /// </summary>
         Handle,

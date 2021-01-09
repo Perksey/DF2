@@ -2,7 +2,7 @@
 {
     public interface IValue
     {
-        string Name { get; set; }
+        string Name { get; }
         string AbsolutePath { get; }
         uint? Handle { get; set; }
         ValueKind Kind { get; }

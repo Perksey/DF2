@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 
 namespace Ultz.DF2
 {
@@ -10,25 +11,53 @@ namespace Ultz.DF2
         private object _data;
         private ValueKind _kind;
 
-        internal Value(IGroupInternal parent, string name, ValueKind initialKind, object initialValue)
+        internal Value(IGroupInternal parent, string name, ValueKind initialKind, object initialValue,
+            bool send = false)
         {
             _parent = parent;
             _name = name;
             _kind = initialKind;
             _data = initialValue;
+            if (send)
+            {
+                Data = initialValue;
+            }
         }
 
         public object Data
         {
             get => _data;
-            set => _data = value;
+            set
+            {
+                var s = _parent.GetStream();
+                s.OutboundCurrentGroup = _parent switch
+                {
+                    _ when _parent is Group group => group,
+                    _ when _parent is Df2Stream => null,
+                    _ => throw new InvalidOperationException("This group is neither a child of the stream or a group.")
+                };
+                
+                if (_handle is not null && value is null)
+                {
+                    s.Sender.SendRemove(_name);
+                }
+                else if (_handle is null && value is not null)
+                {
+                    s.Sender.SendValue(
+                        Df2Stream.GetRelativePath(AbsolutePath, s.OutboundCurrentGroup?.AbsolutePath ?? "/"), value,
+                        out _kind);
+                }
+                else if (value is not null)
+                {
+                    s.Sender.SendEditValueByHandle(_handle.Value, _kind, value, out _kind,
+                        Df2Stream.GetRelativePath(AbsolutePath, s.OutboundCurrentGroup?.AbsolutePath ?? "/"));
+                }
+
+                UpdateValue(_kind, value);
+            }
         }
 
-        public string Name
-        {
-            get => _name;
-            set => _name = value;
-        }
+        public string Name => _name;
 
         public string AbsolutePath => (_parent as Group)?.AbsolutePath + "/" + Name;
 
@@ -36,7 +65,21 @@ namespace Ultz.DF2
         {
             get => _handle;
             set
-            { _handle = value; }
+            {
+                var s = _parent.GetStream();
+                if (_handle is not null && value is null)
+                {
+                    s.Sender.SendHandle(string.Empty, _handle.Value);
+                }
+                else if (value is not null)
+                {
+                    s.Sender.SendHandle(
+                        Df2Stream.GetRelativePath(AbsolutePath, s.OutboundCurrentGroup?.AbsolutePath ?? "/"),
+                        value.Value);
+                }
+
+                ((IValueInternal) this).UpdateHandle(value);
+            }
         }
 
         public ValueKind Kind => _kind;

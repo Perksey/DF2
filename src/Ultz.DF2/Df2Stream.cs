@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,16 +13,25 @@ namespace Ultz.DF2
     /// </summary>
     public class Df2Stream : IDisposable, IGroup, IGroupInternal
     {
-        public Df2Stream(Stream @base)
+        private readonly bool _leaveOpen;
+        private Group? _outboundCurrentGroup;
+
+        public Df2Stream(Stream @base, StreamMode mode, bool leaveOpen = false)
         {
-            if (@base.CanRead)
+            _leaveOpen = leaveOpen;
+            if (@base.CanRead && (mode & StreamMode.Read) != 0)
             {
-                BaseReader = new BinaryReader(@base, Encoding.UTF8, true);
+                BaseReader = new BinaryReader(@base, Encoding.UTF8, leaveOpen);
+                if (!Preface.IsValid(BaseReader))
+                {
+                    throw new InvalidOperationException();
+                }
             }
 
-            if (@base.CanWrite)
+            if (@base.CanWrite && (mode & StreamMode.Write) != 0)
             {
-                BaseWriter = new BinaryWriter(@base, Encoding.UTF8, true);
+                BaseWriter = new BinaryWriter(@base, Encoding.UTF8, leaveOpen);
+                Preface.Write(BaseWriter);
             }
 
             Receiver = new CommandReceiver(this);
@@ -32,15 +43,28 @@ namespace Ultz.DF2
         public bool HasReceivedEnd { get; internal set; }
         public IValueDictionary Values { get; } = new ValueDictionary(x => x.Name);
         public Group? InboundCurrentGroup { get; internal set; }
-        public Group? OutboundCurrentGroup { get; private set; }
+
+        public Group? OutboundCurrentGroup
+        {
+            get => _outboundCurrentGroup;
+            internal set
+            {
+                if (value?.Handle is not null)
+                {
+                    Sender.SendGroupByHandle(value.Handle.Value);
+                }
+                else
+                {
+                    Sender.SendGroup(value?.AbsolutePath ?? string.Empty);
+                }
+                
+                _outboundCurrentGroup = value;
+            }
+        }
+
         internal CommandReceiver Receiver { get; }
         internal CommandSender Sender { get; }
         public IReadOnlyDictionary<uint, IValue> Handles { get; } = new Dictionary<uint, IValue>();
-
-        public void Dispose()
-        {
-            BaseReader?.Dispose();
-        }
 
         public bool ProcessCommand()
         {
@@ -57,37 +81,70 @@ namespace Ultz.DF2
             return Receiver.ProcessCommand();
         }
 
-        public IValue? GetValue(string absolutePath)
+        public static string GetFullPath(string path, string relativeTo)
         {
-            absolutePath = absolutePath.TrimEnd('/');
-            IValue? ret = null;
-            foreach (var element in absolutePath.Split(new []{'/'}, StringSplitOptions.RemoveEmptyEntries))
+            // TODO improve this, yuck
+            var baseSplit = relativeTo.Split("/", StringSplitOptions.RemoveEmptyEntries).ToList();
+            var pathSplit = path.Split("/", StringSplitOptions.RemoveEmptyEntries);
+
+            if (baseSplit.Contains(".."))
             {
-                if (ret is null)
+                throw new ArgumentException("Must be an absolute path", nameof(relativeTo));
+            }
+
+            foreach (var item in pathSplit)
+            {
+                switch (item)
                 {
-                    ret = Values[element];
-                }
-                else
-                {
-                    if (ret is Group group)
+                    case "..":
                     {
-                        ret = group.Values[element];
+                        baseSplit.RemoveAt(baseSplit.Count - 1);
+                        break;
                     }
-                    else
+                    case ".":
                     {
-                        throw new InvalidOperationException("Attempted to read within a value instead of a group.");
+                        // do nothing
+                        break;
+                    }
+                    default:
+                    {
+                        baseSplit.Add(item);
+                        break;
                     }
                 }
             }
 
-            return ret;
+            return "/" + string.Join("/", baseSplit);
         }
 
-        internal static string ToPath(string path) => path.Replace(Path.PathSeparator, '/')
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace(Path.VolumeSeparatorChar, '/')
-            .Replace(Path.AltDirectorySeparatorChar, '/');
-        internal static string GetFullPath(string path, string relativeTo) => ToPath(Path.GetFullPath(path, relativeTo));
+        public static string GetRelativePath(string path, string groupRelativeTo)
+        {
+            // TODO improve this, yuck
+            var baseSplit = groupRelativeTo.Split('/', StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
+            var pathSplit = path.Split('/', StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
+            if (baseSplit.Contains(".."))
+            {
+                throw new ArgumentException("Must be an absolute path", nameof(groupRelativeTo));
+            }
+            
+            if (pathSplit.Contains(".."))
+            {
+                throw new ArgumentException("Must be an absolute path", nameof(pathSplit));
+            }
+            
+            var lastMatchingIndex = 0;
+            for (; lastMatchingIndex < baseSplit.Length && lastMatchingIndex < pathSplit.Length; lastMatchingIndex++)
+            {
+                if (baseSplit[lastMatchingIndex] != pathSplit[lastMatchingIndex])
+                {
+                    break;
+                }
+            }
+
+            baseSplit = baseSplit[lastMatchingIndex..];
+            pathSplit = pathSplit[lastMatchingIndex..];
+            return string.Join("/", baseSplit.Select(_ => "..").Concat(pathSplit).Where(x => !string.IsNullOrEmpty(x)));
+        }
 
         public void ProcessUntilEnd()
         {
@@ -97,14 +154,103 @@ namespace Ultz.DF2
             }
         }
 
+        public void RewriteOptimized()
+        {
+            var s = BaseWriter?.BaseStream ?? throw new InvalidOperationException("Stream not writable");
+            if (!s.CanSeek)
+            {
+                throw new InvalidOperationException("Stream not seekable");
+            }
+            
+            s.Seek(0, SeekOrigin.Begin);
+            s.SetLength(0);
+            Write(this);
+
+            static void Write(IGroup group)
+            {
+                if (group is not Df2Stream)
+                {
+                    ((IGroupInternal)group).GetStream().Sender.SendGroup(group.Name);
+                }
+
+                foreach (var (name, value) in group.Values)
+                {
+                    if (value is IGroup childGroup)
+                    {
+                        Write(childGroup);
+                    }
+                    else
+                    {
+                        ((IGroupInternal)group).GetStream().Sender.SendValue(name, (Value)value, out _);
+                    }
+                }
+                
+                if (group is not Df2Stream)
+                {
+                    ((IGroupInternal)group).GetStream().Sender.SendGroup("..");
+                }
+            }
+        }
+
+        public void Flush()
+        {
+            if (BaseWriter is null)
+            {
+                throw new InvalidOperationException();
+            }
+            
+            Sender.SendEnd();
+            BaseWriter.Flush();
+        }
+
         public void Close()
         {
-            var stream = BaseReader?.BaseStream ?? BaseWriter?.BaseStream;
             BaseReader?.Close();
             BaseWriter?.Close();
-            stream?.Close();
         }
 
         public Df2Stream GetStream() => this;
+
+        public Group GetOrAddGroup(string name) => new (this, name, true);
+        public Value AddOrUpdate(string name, byte val) => new (this, name, ValueKind.Byte, val, true);
+        public Value AddOrUpdate(string name, sbyte val) => new (this, name, ValueKind.SByte, val, true);
+        public Value AddOrUpdate(string name, short val) => new (this, name, ValueKind.Short, val, true);
+        public Value AddOrUpdate(string name, ushort val) => new (this, name, ValueKind.UShort, val, true);
+        public Value AddOrUpdate(string name, int val) => new (this, name, ValueKind.Int, val, true);
+        public Value AddOrUpdate(string name, uint val) => new (this, name, ValueKind.UInt, val, true);
+        public Value AddOrUpdate(string name, long val) => new (this, name, ValueKind.Long, val, true);
+        public Value AddOrUpdate(string name, ulong val) => new (this, name, ValueKind.ULong, val, true);
+        public Value AddOrUpdate(string name, float val) => new (this, name, ValueKind.Float, val, true);
+        public Value AddOrUpdate(string name, double val) => new (this, name, ValueKind.Double, val, true);
+        public Value AddOrUpdate(string name, string val) => new (this, name, ValueKind.String, val, true);
+        public Value AddOrUpdate(string name, byte[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, sbyte[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, short[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, ushort[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, int[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, uint[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, long[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, ulong[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, float[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, double[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, string[] val) => new (this, name, ValueKind.Array, val, true);
+        public Value AddOrUpdate(string name, IEnumerable val) => new (this, name, ValueKind.List, val, true);
+
+        public void Dispose()
+        {
+            BaseReader?.Dispose();
+            BaseWriter?.Dispose();
+        }
+
+        string IValue.Name => null;
+        string IValue.AbsolutePath => null;
+
+        uint? IValue.Handle
+        {
+            get => null;
+            set { }
+        }
+
+        ValueKind IValue.Kind => ValueKind.Group;
     }
 }
