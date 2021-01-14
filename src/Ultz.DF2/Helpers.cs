@@ -4,159 +4,16 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Ultz.DF2
 {
     public static class Helpers
     {
-        public static Span<byte> WriteBytes(Span<byte> bytes, uint value)
-        {
-            if (value < 0x80)
-            {
-                bytes[0] = ((byte) value);
-                return bytes.Slice(0, 1);
-            }
-            else if (value < 0x4000)
-            {
-                bytes[0] = ((byte) (0x80 | (value >> 8)));
-                bytes[1] = ((byte) (value & 0xff));
-                return bytes.Slice(0, 2);
-            }
-            else
-            {
-                bytes[0] = ((byte) ((value >> 24) | 0xc0));
-                bytes[1] = ((byte) ((value >> 16) & 0xff));
-                bytes[2] = ((byte) ((value >> 8) & 0xff));
-                bytes[3] = ((byte) (value & 0xff));
-                return bytes.Slice(0, 4);
-            }
-        }
-
-        public static Span<byte> WriteBytes(Span<byte> bytes, int value)
-        {
-            if (value >= 0)
-            {
-                return WriteBytes(bytes, (uint) (value << 1));
-            }
-
-            if (value > -0x40)
-            {
-                value = 0x40 + value;
-            }
-            else if (value >= -0x2000)
-            {
-                value = 0x2000 + value;
-            }
-            else if (value >= -0x20000000)
-            {
-                value = 0x20000000 + value;
-            }
-
-            return WriteBytes(bytes, (uint) ((value << 1) | 1));
-        }
-
-        public static void ReadBytes(Span<byte> bytes, out uint value)
-        {
-            var i = 0;
-            var first = bytes[i++];
-            if ((first & 0x80) == 0)
-                value = first;
-
-            if ((first & 0x40) == 0)
-                value = ((uint) (first & ~0x80) << 8)
-                       | bytes[i++];
-
-            value = ((uint) (first & ~0xc0) << 24)
-                   | (uint) bytes[i++] << 16
-                   | (uint) bytes[i++] << 8
-                   | bytes[i++];
-        }
-
-        public static void ReadBytes(Span<byte> bytes, out int value)
-        {
-            var b = bytes [0];
-            ReadBytes (bytes, out uint ut);
-            var u = (int) ut;
-            var v = u >> 1;
-            if ((u & 1) == 0)
-                value = v;
-
-            switch (b & 0xc0)
-            {
-                case 0:
-                case 0x40:
-                    value = v - 0x40;
-                    break;
-                case 0x80:
-                    value = v - 0x2000;
-                    break;
-                default:
-                    value = v - 0x10000000;
-                    break;
-            }
-        }
-
-        public static uint ReadDf2UInt(this BinaryReader reader) => reader.CoreReadDf2UInt(reader.ReadByte());
-
-        private static uint CoreReadDf2UInt(this BinaryReader reader, byte first)
-        {
-            if ((first & 0x80) == 0)
-                return first;
-
-            if ((first & 0x40) == 0)
-                return ((uint) (first & ~0x80) << 8)
-                       | reader.ReadByte ();
-
-            return ((uint) (first & ~0xc0) << 24)
-                   | (uint) reader.ReadByte () << 16
-                   | (uint) reader.ReadByte () << 8
-                   | reader.ReadByte ();
-        }
-
-        public static int ReadDf2Int(this BinaryReader reader)
-        {
-            var b = reader.ReadByte();
-            var u = (int) reader.CoreReadDf2UInt(b);
-            var v = u >> 1;
-            if ((u & 1) == 0)
-                return v;
-
-            switch (b & 0xc0)
-            {
-                case 0:
-                case 0x40:
-                    return v - 0x40;
-                case 0x80:
-                    return v - 0x2000;
-                default:
-                    return v - 0x10000000;
-            }
-        }
-
-        public static void WriteDf2UInt(this BinaryWriter writer, uint value)
-        {
-            #if NETSTANDARD2_0
-            var bytes = new byte[sizeof(uint)];
-            var span = WriteBytes(bytes, value);
-            writer.Write(bytes, 0, span.Length);
-            #else
-            Span<byte> bytes = stackalloc byte[sizeof(uint)];
-            writer.Write(bytes);
-#endif            
-        }
-
-        public static void WriteDf2Int(this BinaryWriter writer, int value)
-        {
-#if NETSTANDARD2_0
-            var bytes = new byte[sizeof(int)];
-            var span = WriteBytes(bytes, value);
-            writer.Write(bytes, 0, span.Length);
-#else
-            Span<byte> bytes = stackalloc byte[sizeof(int)];
-            writer.Write(bytes);
-#endif            
-        }
+        internal static string CoreToString(object obj) => obj is IEnumerable enumerable && obj is not string
+            ? "[(" + string.Join("), (", enumerable.Cast<object>().Select(CoreToString)) + ")]"
+            : obj?.ToString() ?? "<NULL>";
 
         public static string ReadDf2String(this BinaryReader reader)
         {
@@ -205,7 +62,7 @@ namespace Ultz.DF2
 
         public static void WriteDf2String(this BinaryWriter writer, string value)
         {
-            writer.Write(value);
+            writer.Write(Encoding.UTF8.GetBytes(value));
             writer.Write((byte)0x00);
         }
 
@@ -219,7 +76,7 @@ namespace Ultz.DF2
 
         private static void AssertKind(ValueKind left, ValueKind right)
         {
-            if (left == right)
+            if (left != right)
             {
                 throw new DataException($"Attempted to interpret a {left} as a {right}");
             }
@@ -295,7 +152,7 @@ namespace Ultz.DF2
         {
             return (Group) value;
         }
-        public static T[] AsArray<T>(this IValue value) where T:unmanaged
+        public static T[] AsArray<T>(this IValue value)
         {
             AssertValue(value);
             AssertKind(value.Kind, ValueKind.Array);
@@ -312,6 +169,134 @@ namespace Ultz.DF2
         {
             AssertValue(value);
             return ((Value) value).Data;
+        }
+
+        public static void WriteDf2Int(this BinaryWriter writer, int value)
+            => writer.WriteDf2UInt(Unsafe.As<int, uint>(ref value));
+
+        public static void WriteDf2UInt(this BinaryWriter writer, uint uValue)
+        {
+            // Write out an int 7 bits at a time. The high bit of the byte,
+            // when on, tells reader to continue reading more bytes.
+            //
+            // Using the constants 0x7F and ~0x7F below offers smaller
+            // codegen than using the constant 0x80.
+ 
+            while (uValue > 0x7Fu)
+            {
+                writer.Write((byte)(uValue | ~0x7Fu));
+                uValue >>= 7;
+            }
+ 
+            writer.Write((byte)uValue);
+        }
+
+        public static void WriteDf2Int64(this BinaryWriter writer, long value)
+            => writer.WriteDf2UInt64(Unsafe.As<long, ulong>(ref value));
+ 
+        public static void WriteDf2UInt64(this BinaryWriter writer, ulong uValue)
+        {
+            // Write out an int 7 bits at a time. The high bit of the byte,
+            // when on, tells reader to continue reading more bytes.
+            //
+            // Using the constants 0x7F and ~0x7F below offers smaller
+            // codegen than using the constant 0x80.
+ 
+            while (uValue > 0x7Fu)
+            {
+                writer.Write((byte)((uint)uValue | ~0x7Fu));
+                uValue >>= 7;
+            }
+ 
+            writer.Write((byte)uValue);
+        }
+
+        public static int ReadDf2Int(this BinaryReader reader)
+            => Unsafe.As<uint, int>(ref Unsafe.AsRef(reader.ReadDf2UInt()));
+        public static uint ReadDf2UInt(this BinaryReader reader)
+        {
+            // Unlike writing, we can't delegate to the 64-bit read on
+            // 64-bit platforms. The reason for this is that we want to
+            // stop consuming bytes if we encounter an integer overflow.
+ 
+            uint result = 0;
+            byte byteReadJustNow;
+ 
+            // Read the integer 7 bits at a time. The high bit
+            // of the byte when on means to continue reading more bytes.
+            //
+            // There are two failure cases: we've read more than 5 bytes,
+            // or the fifth byte is about to cause integer overflow.
+            // This means that we can read the first 4 bytes without
+            // worrying about integer overflow.
+ 
+            const int maxBytesWithoutOverflow = 4;
+            for (var shift = 0; shift < maxBytesWithoutOverflow * 7; shift += 7)
+            {
+                // ReadByte handles end of stream cases for us.
+                byteReadJustNow = reader.ReadByte();
+                result |= (byteReadJustNow & 0x7Fu) << shift;
+ 
+                if (byteReadJustNow <= 0x7Fu)
+                {
+                    return result; // early exit
+                }
+            }
+ 
+            // Read the 5th byte. Since we already read 28 bits,
+            // the value of this byte must fit within 4 bits (32 - 28),
+            // and it must not have the high bit set.
+ 
+            byteReadJustNow = reader.ReadByte();
+            if (byteReadJustNow > 0b_1111u)
+            {
+                throw new FormatException("Bad 7-bit int");
+            }
+ 
+            result |= (uint)byteReadJustNow << (maxBytesWithoutOverflow * 7);
+            return result;
+        }
+ 
+        public static long ReadDf2Int64(this BinaryReader reader)
+            => Unsafe.As<ulong, long>(ref Unsafe.AsRef(reader.ReadDf2UInt64()));
+        public static ulong ReadDf2UInt64(this BinaryReader reader)
+        {
+            ulong result = 0;
+            byte byteReadJustNow;
+ 
+            // Read the integer 7 bits at a time. The high bit
+            // of the byte when on means to continue reading more bytes.
+            //
+            // There are two failure cases: we've read more than 10 bytes,
+            // or the tenth byte is about to cause integer overflow.
+            // This means that we can read the first 9 bytes without
+            // worrying about integer overflow.
+ 
+            const int maxBytesWithoutOverflow = 9;
+            for (var shift = 0; shift < maxBytesWithoutOverflow * 7; shift += 7)
+            {
+                // ReadByte handles end of stream cases for us.
+                byteReadJustNow = reader.ReadByte();
+                result |= (byteReadJustNow & 0x7Ful) << shift;
+ 
+                if (byteReadJustNow <= 0x7Fu)
+                {
+                    return result; // early exit
+                }
+            }
+ 
+            // Read the 10th byte. Since we already read 63 bits,
+            // the value of this byte must fit within 1 bit (64 - 63),
+            // and it must not have the high bit set.
+ 
+            byteReadJustNow = reader.ReadByte();
+            if (byteReadJustNow > 0b_1u)
+            {
+                throw new FormatException("Bad 7-bit int");
+            }
+ 
+            result |= (ulong)byteReadJustNow << (maxBytesWithoutOverflow * 7);
+            return result;
         }
     }
 }

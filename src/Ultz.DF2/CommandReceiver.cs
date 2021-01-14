@@ -16,30 +16,37 @@ namespace Ultz.DF2
 
         public bool ProcessCommand()
         {
+            if (_stream.BaseReader is null)
+            {
+                throw new NotSupportedException("Stream is not configured for reading");
+            }
+            
             var cmd = (Command) _stream.BaseReader!.ReadByte();
             switch (cmd)
             {
                 case Command.End:
                 {
                     _stream.HasReceivedEnd = true;
+                    _stream.CoreReceiveEvent("End;");
                     return false;
                 }
                 case Command.Group:
                 {
                     var path = Df2Stream.GetFullPath(_stream.BaseReader.ReadDf2String(),
-                        _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
+                        _stream.InboundCurrentGroup?.AbsolutePath ?? "/");
+                    _stream.CoreReceiveEvent($"Group ({path});");
                     if (string.IsNullOrWhiteSpace(path))
                     {
                         if (path == string.Empty)
                         {
                             _stream.InboundCurrentGroup = null;
+                            break;
                         }
-                        
 
                         throw new InvalidOperationException();
                     }
 
-                    var previousPath = new Uri(new Uri(path), ".").ToString();
+                    var previousPath = Df2Stream.GetFullPath("..", path);
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -53,7 +60,7 @@ namespace Ultz.DF2
                     var name = Path.GetFileName(path);
                     if (!parentGroupDictionary.TryGetValue(name, out var value))
                     {
-                        parentGroupDictionary.Add(value = new Group(parentValue ?? (object) _stream, name));
+                        parentGroupDictionary.Add(value = new Group(parentValue ?? _stream, name));
                     }
 
                     _stream.InboundCurrentGroup = (Group) value;
@@ -64,12 +71,13 @@ namespace Ultz.DF2
                     var kind = (ValueKind) _stream.BaseReader.ReadByte();
                     var path = Df2Stream.GetFullPath(_stream.BaseReader.ReadDf2String(),
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
+                    ValueTuple<ValueKind, string, object> recv = (kind, path, null);
                     if (string.IsNullOrWhiteSpace(path))
                     {
                         throw new InvalidOperationException("Path should not be null or whitespace");
                     }
 
-                    var previousPath = new Uri(new Uri(path), ".").ToString();
+                    var previousPath = Df2Stream.GetFullPath("..", path);
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -82,13 +90,16 @@ namespace Ultz.DF2
                     var name = Path.GetFileName(path);
                     if (currentDictionary.TryGetValue(name, out var val))
                     {
-                        ((Value) val).UpdateValue(kind, ReadValue(kind, out _));
+                        ((Value) val).UpdateValue(kind, recv.Item3 = ReadValue(kind, out _));
                     }
                     else
                     {
                         currentDictionary.Add(new Value((IGroupInternal)parentValue ?? _stream, name, kind,
-                            ReadValue(kind, out _)));
+                            recv.Item3 = ReadValue(kind, out _)));
                     }
+
+                    _stream.CoreReceiveEvent(
+                        $"Value {recv.Item1} ({recv.Item2}) ({Helpers.CoreToString(recv.Item3)});");
 
                     break;
                 }
@@ -100,8 +111,10 @@ namespace Ultz.DF2
                     {
                         throw new InvalidOperationException("Path should not be null or whitespace");
                     }
+                    
+                    _stream.CoreReceiveEvent($"Remove ({path});");
 
-                    var previousPath = new Uri(new Uri(path), ".").ToString();
+                    var previousPath = Df2Stream.GetFullPath("..", path);
                     var parentValue = _stream.GetValue(previousPath);
                     if (parentValue is Value)
                     {
@@ -116,13 +129,15 @@ namespace Ultz.DF2
                 }
                 case Command.Handle:
                 {
-                    var path = Df2Stream.GetFullPath(_stream.BaseReader.ReadDf2String(),
-                        _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
-                    if (string.IsNullOrWhiteSpace(path))
+                    var rawPath = _stream.BaseReader.ReadDf2String();
+                    if (string.IsNullOrWhiteSpace(rawPath))
                     {
                         ((IDictionary<uint, IValue>) _stream.Handles).Remove(_stream.BaseReader.ReadDf2UInt());
                         break;
                     }
+                    
+                    var path = Df2Stream.GetFullPath(rawPath,
+                        _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
 
                     var value = _stream.GetValue(path);
                     if (value is null)
@@ -130,29 +145,37 @@ namespace Ultz.DF2
                         throw new InvalidOperationException("Can't assign a handle to the root of the document");
                     }
 
-                    ((IValueInternal)value).UpdateHandle(_stream.BaseReader.ReadDf2UInt());
+                    uint handle;
+                    ((IValueInternal)value).UpdateHandle(handle = _stream.BaseReader.ReadDf2UInt());
+                    ((IDictionary<uint, IValue>) _stream.Handles).Add(handle, value);
+                    _stream.CoreReceiveEvent($"Handle ({path}) {handle};");
                     break;
                 }
                 case Command.EditValueByHandle:
                 {
-                    var val = _stream.Handles[_stream.BaseReader.ReadDf2UInt()];
+                    uint handle;
+                    var val = _stream.Handles[handle = _stream.BaseReader.ReadDf2UInt()];
                     if (val is not Value value)
                     {
                         throw new InvalidOperationException("Can only set a value of a handle referring to a value");
                     }
-                    
-                    value.UpdateValue(val.Kind, ReadValue(val.Kind, out _));
+
+                    object read;
+                    value.UpdateValue(val.Kind, read = ReadValue(val.Kind, out _));
+                    _stream.CoreReceiveEvent($"EditValueByHandle {handle} ({Helpers.CoreToString(read)});");
                     break;
                 }
                 case Command.GroupByHandle:
                 {
-                    var val = _stream.Handles[_stream.BaseReader.ReadDf2UInt()];
+                    uint handle;
+                    var val = _stream.Handles[handle = _stream.BaseReader.ReadDf2UInt()];
                     if (val is not Group value)
                     {
                         throw new InvalidOperationException("Can only set a value of a handle referring to a value");
                     }
 
                     _stream.InboundCurrentGroup = value;
+                    _stream.CoreReceiveEvent($"GroupByHandle {handle};");
                     break;
                 }
                 default:
@@ -176,33 +199,14 @@ namespace Ultz.DF2
                 case ValueKind.Int:
                     return _stream.BaseReader!.ReadDf2Int();
                 case ValueKind.Long:
-                {
-                    unsafe
-                    {
-                        var ret = stackalloc uint[2];
-                        ret[0] = _stream.BaseReader!.ReadDf2UInt();
-                        ret[1] = _stream.BaseReader!.ReadDf2UInt();
-                        return *(long*) ret;
-                    }
-                }
+                    return _stream.BaseReader!.ReadDf2Int64();
                 case ValueKind.Float:
                 {
-                    unsafe
-                    {
-                        var ret = stackalloc uint[1];
-                        ret[0] = _stream.BaseReader!.ReadDf2UInt();
-                        return *(float*) ret;
-                    }
+                    return _stream.BaseReader!.ReadSingle();
                 }
                 case ValueKind.Double:
                 {
-                    unsafe
-                    {
-                        var ret = stackalloc uint[2];
-                        ret[0] = _stream.BaseReader!.ReadDf2UInt();
-                        ret[1] = _stream.BaseReader!.ReadDf2UInt();
-                        return *(double*) ret;
-                    }
+                    return _stream.BaseReader!.ReadDouble();
                 }
                 case ValueKind.String:
                 {
@@ -213,27 +217,13 @@ namespace Ultz.DF2
                     throw new InvalidOperationException("Groups are not values");
                 }
                 case ValueKind.SByte:
-                {
-                    unsafe
-                    {
-                        var val = _stream.BaseReader!.ReadByte();
-                        return *(sbyte*) &val;
-                    }
-                }
+                    return _stream.BaseReader!.ReadSByte();
                 case ValueKind.UShort:
                     return (ushort) _stream.BaseReader!.ReadDf2UInt();
                 case ValueKind.UInt:
                     return _stream.BaseReader!.ReadDf2UInt();
                 case ValueKind.ULong:
-                {
-                    unsafe
-                    {
-                        var ret = stackalloc uint[2];
-                        ret[0] = _stream.BaseReader!.ReadDf2UInt();
-                        ret[1] = _stream.BaseReader!.ReadDf2UInt();
-                        return *(ulong*) ret;
-                    }
-                }
+                    return _stream.BaseReader!.ReadDf2UInt64();
                 case ValueKind.Array:
                 {
                     var arrayKind = (ValueKind) _stream.BaseReader!.ReadByte();

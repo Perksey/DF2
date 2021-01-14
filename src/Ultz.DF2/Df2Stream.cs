@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -37,6 +38,9 @@ namespace Ultz.DF2
             Receiver = new CommandReceiver(this);
             Sender = new CommandSender(this);
         }
+
+        public event Action<string> CommandSend;
+        public event Action<string> CommandReceive;
         
         public BinaryReader? BaseReader { get; }
         public BinaryWriter? BaseWriter { get; }
@@ -55,7 +59,7 @@ namespace Ultz.DF2
                 }
                 else
                 {
-                    Sender.SendGroup(value?.AbsolutePath ?? string.Empty);
+                    Sender.SendGroup(GetRelativePath(value?.AbsolutePath ?? string.Empty, _outboundCurrentGroup?.AbsolutePath ?? "/"));
                 }
                 
                 _outboundCurrentGroup = value;
@@ -84,8 +88,8 @@ namespace Ultz.DF2
         public static string GetFullPath(string path, string relativeTo)
         {
             // TODO improve this, yuck
-            var baseSplit = relativeTo.Split("/", StringSplitOptions.RemoveEmptyEntries).ToList();
-            var pathSplit = path.Split("/", StringSplitOptions.RemoveEmptyEntries);
+            var baseSplit = relativeTo.Split(new []{"/"}, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var pathSplit = path.Split(new[]{"/"}, StringSplitOptions.RemoveEmptyEntries);
 
             if (baseSplit.Contains(".."))
             {
@@ -114,14 +118,14 @@ namespace Ultz.DF2
                 }
             }
 
-            return "/" + string.Join("/", baseSplit);
+            return string.Join("/", baseSplit);
         }
 
         public static string GetRelativePath(string path, string groupRelativeTo)
         {
             // TODO improve this, yuck
-            var baseSplit = groupRelativeTo.Split('/', StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
-            var pathSplit = path.Split('/', StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
+            var baseSplit = groupRelativeTo.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
+            var pathSplit = path.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
             if (baseSplit.Contains(".."))
             {
                 throw new ArgumentException("Must be an absolute path", nameof(groupRelativeTo));
@@ -141,8 +145,10 @@ namespace Ultz.DF2
                 }
             }
 
-            baseSplit = baseSplit[lastMatchingIndex..];
-            pathSplit = pathSplit[lastMatchingIndex..];
+            baseSplit = new ArraySegment<string>(baseSplit, lastMatchingIndex, baseSplit.Length - lastMatchingIndex)
+                .ToArray();
+            pathSplit = new ArraySegment<string>(pathSplit, lastMatchingIndex, pathSplit.Length - lastMatchingIndex)
+                .ToArray();
             return string.Join("/", baseSplit.Select(_ => "..").Concat(pathSplit).Where(x => !string.IsNullOrEmpty(x)));
         }
 
@@ -161,33 +167,45 @@ namespace Ultz.DF2
             {
                 throw new InvalidOperationException("Stream not seekable");
             }
-            
+
             s.Seek(0, SeekOrigin.Begin);
             s.SetLength(0);
-            Write(this);
+            CopyTo(this);
+        }
 
-            static void Write(IGroup group)
+        public void CopyTo(Df2Stream dest)
+        {
+            Write(dest, this);
+            static void Write(Df2Stream dest, IGroup group)
             {
                 if (group is not Df2Stream)
                 {
-                    ((IGroupInternal)group).GetStream().Sender.SendGroup(group.Name);
+                    dest.Sender.SendGroup(group.Name);
+                    if (group.Handle is not null)
+                    {
+                        dest.Sender.SendHandle(".", group.Handle.Value);
+                    }
                 }
 
-                foreach (var (name, value) in group.Values)
+                foreach (var kvp in group.Values)
                 {
-                    if (value is IGroup childGroup)
+                    if (kvp.Value is IGroup childGroup)
                     {
-                        Write(childGroup);
+                        Write(dest, childGroup);
                     }
                     else
                     {
-                        ((IGroupInternal)group).GetStream().Sender.SendValue(name, (Value)value, out _);
+                        dest.Sender.SendValue(kvp.Key, ((Value)kvp.Value).Data, out _);
+                        if (kvp.Value.Handle is not null)
+                        {
+                            dest.Sender.SendHandle(kvp.Key, kvp.Value.Handle.Value);
+                        }
                     }
                 }
                 
                 if (group is not Df2Stream)
                 {
-                    ((IGroupInternal)group).GetStream().Sender.SendGroup("..");
+                    dest.Sender.SendGroup("..");
                 }
             }
         }
@@ -211,36 +229,407 @@ namespace Ultz.DF2
 
         public Df2Stream GetStream() => this;
 
-        public Group GetOrAddGroup(string name) => new (this, name, true);
-        public Value AddOrUpdate(string name, byte val) => new (this, name, ValueKind.Byte, val, true);
-        public Value AddOrUpdate(string name, sbyte val) => new (this, name, ValueKind.SByte, val, true);
-        public Value AddOrUpdate(string name, short val) => new (this, name, ValueKind.Short, val, true);
-        public Value AddOrUpdate(string name, ushort val) => new (this, name, ValueKind.UShort, val, true);
-        public Value AddOrUpdate(string name, int val) => new (this, name, ValueKind.Int, val, true);
-        public Value AddOrUpdate(string name, uint val) => new (this, name, ValueKind.UInt, val, true);
-        public Value AddOrUpdate(string name, long val) => new (this, name, ValueKind.Long, val, true);
-        public Value AddOrUpdate(string name, ulong val) => new (this, name, ValueKind.ULong, val, true);
-        public Value AddOrUpdate(string name, float val) => new (this, name, ValueKind.Float, val, true);
-        public Value AddOrUpdate(string name, double val) => new (this, name, ValueKind.Double, val, true);
-        public Value AddOrUpdate(string name, string val) => new (this, name, ValueKind.String, val, true);
-        public Value AddOrUpdate(string name, byte[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, sbyte[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, short[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, ushort[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, int[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, uint[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, long[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, ulong[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, float[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, double[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, string[] val) => new (this, name, ValueKind.Array, val, true);
-        public Value AddOrUpdate(string name, IEnumerable val) => new (this, name, ValueKind.List, val, true);
+        public Group GetOrAddGroup(string name)
+        {
+            if (Values.TryGetValue(name, out var val))
+            {
+                if (val is not Group group)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a group.");
+                }
+
+                return group;
+            }
+            
+            return new(this, name, true);
+        }
+
+        public Value AddOrUpdate(string name, byte val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Byte, val, true);
+        }
+
+        public Value AddOrUpdate(string name, sbyte val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.SByte, val, true);
+        }
+
+        public Value AddOrUpdate(string name, short val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Short, val, true);
+        }
+
+        public Value AddOrUpdate(string name, ushort val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.UShort, val, true);
+        }
+
+        public Value AddOrUpdate(string name, int val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Int, val, true);
+        }
+
+        public Value AddOrUpdate(string name, uint val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.UInt, val, true);
+        }
+
+        public Value AddOrUpdate(string name, long val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Long, val, true);
+        }
+
+        public Value AddOrUpdate(string name, ulong val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.ULong, val, true);
+        }
+
+        public Value AddOrUpdate(string name, float val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Float, val, true);
+        }
+
+        public Value AddOrUpdate(string name, double val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Double, val, true);
+        }
+
+        public Value AddOrUpdate(string name, string val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.String, val, true);
+        }
+
+        public Value AddOrUpdate(string name, byte[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, sbyte[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, short[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, ushort[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, int[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, uint[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, long[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, ulong[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, float[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, double[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, string[] val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.Array, val, true);
+        }
+
+        public Value AddOrUpdate(string name, IEnumerable val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            return new(this, name, ValueKind.List, val, true);
+        }
+
+        public bool Remove(string name)
+        {
+            if (!((IDictionary<string, IValue>) Values).Remove(name))
+            {
+                return false;
+            }
+
+            Sender.SendRemove(name);
+            return true;
+        }
 
         public void Dispose()
         {
             BaseReader?.Dispose();
             BaseWriter?.Dispose();
         }
+
+        public IValue this[string name] => Values[name];
 
         string IValue.Name => null;
         string IValue.AbsolutePath => null;
@@ -252,5 +641,8 @@ namespace Ultz.DF2
         }
 
         ValueKind IValue.Kind => ValueKind.Group;
+
+        internal void CoreSendEvent(string str) => CommandSend?.Invoke(str);
+        internal void CoreReceiveEvent(string str) => CommandReceive?.Invoke(str);
     }
 }

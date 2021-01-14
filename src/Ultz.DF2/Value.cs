@@ -30,24 +30,24 @@ namespace Ultz.DF2
             set
             {
                 var s = _parent.GetStream();
-                s.OutboundCurrentGroup = _parent switch
+                if (s.OutboundCurrentGroup != _parent as Group)
                 {
-                    _ when _parent is Group group => group,
-                    _ when _parent is Df2Stream => null,
-                    _ => throw new InvalidOperationException("This group is neither a child of the stream or a group.")
-                };
-                
-                if (_handle is not null && value is null)
-                {
-                    s.Sender.SendRemove(_name);
+                    s.OutboundCurrentGroup = _parent switch
+                    {
+                        _ when _parent is Group group => group,
+                        _ when _parent is Df2Stream => null,
+                        _ => throw new InvalidOperationException(
+                            "This group is neither a child of the stream or a group.")
+                    };
                 }
-                else if (_handle is null && value is not null)
+
+                if (_handle is null)
                 {
                     s.Sender.SendValue(
                         Df2Stream.GetRelativePath(AbsolutePath, s.OutboundCurrentGroup?.AbsolutePath ?? "/"), value,
                         out _kind);
                 }
-                else if (value is not null)
+                else
                 {
                     s.Sender.SendEditValueByHandle(_handle.Value, _kind, value, out _kind,
                         Df2Stream.GetRelativePath(AbsolutePath, s.OutboundCurrentGroup?.AbsolutePath ?? "/"));
@@ -56,6 +56,9 @@ namespace Ultz.DF2
                 UpdateValue(_kind, value);
             }
         }
+
+        public IValue this[string name]
+            => throw new InvalidOperationException($"Element at {AbsolutePath} is not a group.");
 
         public string Name => _name;
 
