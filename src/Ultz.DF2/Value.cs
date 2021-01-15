@@ -11,12 +11,12 @@ namespace Ultz.DF2
         private object _data;
         private ValueKind _kind;
 
-        internal Value(IGroupInternal parent, string name, ValueKind initialKind, object initialValue,
+        internal Value(IGroupInternal parent, string name, ValueKind? initialKind, object initialValue,
             bool send = false)
         {
             _parent = parent;
             _name = name;
-            _kind = initialKind;
+            _kind = initialKind ?? ValueKind.Null;
             _data = initialValue;
             if (send)
             {

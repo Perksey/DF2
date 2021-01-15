@@ -37,6 +37,7 @@ namespace Ultz.DF2
 
             Receiver = new CommandReceiver(this);
             Sender = new CommandSender(this);
+            Values = new ValueDictionary(x => x.Name, this);
         }
 
         public event Action<string> CommandSend;
@@ -45,7 +46,7 @@ namespace Ultz.DF2
         public BinaryReader? BaseReader { get; }
         public BinaryWriter? BaseWriter { get; }
         public bool HasReceivedEnd { get; internal set; }
-        public IValueDictionary Values { get; } = new ValueDictionary(x => x.Name);
+        public IValueDictionary Values { get; }
         public Group? InboundCurrentGroup { get; internal set; }
 
         public Group? OutboundCurrentGroup
@@ -175,37 +176,28 @@ namespace Ultz.DF2
 
         public void CopyTo(Df2Stream dest)
         {
-            Write(dest, this);
-            static void Write(Df2Stream dest, IGroup group)
+            Write(this, dest);
+            static void Write(IGroup srcGroup, IGroup destGroup)
             {
-                if (group is not Df2Stream)
+                if (srcGroup.Handle is not null)
                 {
-                    dest.Sender.SendGroup(group.Name);
-                    if (group.Handle is not null)
-                    {
-                        dest.Sender.SendHandle(".", group.Handle.Value);
-                    }
+                    destGroup.Handle = srcGroup.Handle.Value;
                 }
 
-                foreach (var kvp in group.Values)
+                foreach (var kvp in srcGroup.Values)
                 {
                     if (kvp.Value is IGroup childGroup)
                     {
-                        Write(dest, childGroup);
+                        Write(childGroup, destGroup.GetOrAddGroup(kvp.Key));
                     }
                     else
                     {
-                        dest.Sender.SendValue(kvp.Key, ((Value)kvp.Value).Data, out _);
+                        var val = destGroup.AddOrUpdate(kvp.Key, ((Value)kvp.Value).Data);
                         if (kvp.Value.Handle is not null)
                         {
-                            dest.Sender.SendHandle(kvp.Key, kvp.Value.Handle.Value);
+                            val.Handle = kvp.Value.Handle.Value;
                         }
                     }
-                }
-                
-                if (group is not Df2Stream)
-                {
-                    dest.Sender.SendGroup("..");
                 }
             }
         }
@@ -241,7 +233,9 @@ namespace Ultz.DF2
                 return group;
             }
             
-            return new(this, name, true);
+            var ret = new Group(this, name, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, byte val)
@@ -257,7 +251,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Byte, val, true);
+            var ret = new Value(this, name, ValueKind.Byte, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, sbyte val)
@@ -273,7 +269,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.SByte, val, true);
+            var ret = new Value(this, name, ValueKind.SByte, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, short val)
@@ -289,7 +287,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Short, val, true);
+            var ret = new Value(this, name, ValueKind.Short, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, ushort val)
@@ -305,7 +305,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.UShort, val, true);
+            var ret = new Value(this, name, ValueKind.UShort, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, int val)
@@ -321,7 +323,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Int, val, true);
+            var ret = new Value(this, name, ValueKind.Int, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, uint val)
@@ -337,7 +341,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.UInt, val, true);
+            var ret = new Value(this, name, ValueKind.UInt, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, long val)
@@ -353,7 +359,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Long, val, true);
+            var ret = new Value(this, name, ValueKind.Long, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, ulong val)
@@ -369,7 +377,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.ULong, val, true);
+            var ret = new Value(this, name, ValueKind.ULong, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, float val)
@@ -385,7 +395,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Float, val, true);
+            var ret = new Value(this, name, ValueKind.Float, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, double val)
@@ -401,7 +413,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Double, val, true);
+            var ret = new Value(this, name, ValueKind.Double, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, string val)
@@ -417,7 +431,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.String, val, true);
+            var ret = new Value(this, name, ValueKind.String, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, byte[] val)
@@ -433,7 +449,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, sbyte[] val)
@@ -449,7 +467,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, short[] val)
@@ -465,7 +485,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, ushort[] val)
@@ -481,7 +503,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, int[] val)
@@ -497,7 +521,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, uint[] val)
@@ -513,7 +539,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, long[] val)
@@ -529,7 +557,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, ulong[] val)
@@ -545,7 +575,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, float[] val)
@@ -561,7 +593,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, double[] val)
@@ -577,7 +611,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, string[] val)
@@ -593,7 +629,9 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.Array, val, true);
+            var ret = new Value(this, name, ValueKind.Array, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public Value AddOrUpdate(string name, IEnumerable val)
@@ -609,7 +647,27 @@ namespace Ultz.DF2
                 return actualEValue;
             }
 
-            return new(this, name, ValueKind.List, val, true);
+            var ret = new Value(this, name, ValueKind.List, val, true);
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
+        }
+
+        public Value AddOrUpdate(string name, object val)
+        {
+            if (Values.TryGetValue(name, out var existingVal))
+            {
+                if (existingVal is not Value actualEValue)
+                {
+                    throw new DataException($"A value with name \"{name}\" already exists and is not a single value.");
+                }
+
+                actualEValue.Data = val;
+                return actualEValue;
+            }
+
+            var ret = new Value(this, name, null, val, true); // if send is true, the null we pass is replaced anyway
+            ((ValueDictionary) Values).Add(ret);
+            return ret;
         }
 
         public bool Remove(string name)
@@ -619,7 +677,7 @@ namespace Ultz.DF2
                 return false;
             }
 
-            Sender.SendRemove(name);
+            Sender.SendRemove(GetRelativePath(name, OutboundCurrentGroup?.AbsolutePath ?? "/"));
             return true;
         }
 

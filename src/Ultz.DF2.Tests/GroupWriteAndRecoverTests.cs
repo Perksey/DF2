@@ -1,19 +1,18 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Ultz.DF2.Tests
 {
-    public class BasicWriteAndRecoverTests
+    public class GroupWriteAndRecoverTests
     {
         public readonly ITestOutputHelper Out;
 
-        public BasicWriteAndRecoverTests(ITestOutputHelper output)
+        public GroupWriteAndRecoverTests(ITestOutputHelper output)
         {
             Out = output;
         }
@@ -32,8 +31,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -41,7 +41,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsByte());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsByte());
         }
 
         [Theory, InlineData(sbyte.MinValue), InlineData(sbyte.MaxValue), InlineData(42)]
@@ -49,8 +49,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -58,7 +59,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsSByte());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsSByte());
         }
 
         [Theory, InlineData(short.MinValue), InlineData(short.MaxValue), InlineData(42), InlineData(0xFE),
@@ -67,8 +68,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -76,7 +78,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsShort());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsShort());
         }
 
         [Theory, InlineData(ushort.MinValue), InlineData(ushort.MaxValue), InlineData(42), InlineData(0xFE),
@@ -85,8 +87,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -94,7 +97,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsUShort());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsUShort());
         }
 
         [Theory, InlineData(int.MinValue), InlineData(int.MaxValue), InlineData(42), InlineData(0xFE), InlineData(0xFF),
@@ -103,8 +106,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -112,7 +116,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsInt());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsInt());
         }
 
         [Theory, InlineData(uint.MinValue), InlineData(uint.MaxValue), InlineData(42), InlineData(0xFE),
@@ -121,8 +125,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -130,7 +135,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsUInt());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsUInt());
         }
 
         [Theory, InlineData(long.MinValue), InlineData(long.MaxValue), InlineData(42), InlineData(0xFE),
@@ -140,8 +145,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -149,7 +155,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsLong());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsLong());
         }
 
         [Theory, InlineData(ulong.MinValue), InlineData(ulong.MaxValue), InlineData(42), InlineData(0xFE),
@@ -159,8 +165,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -168,7 +175,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsULong());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsULong());
         }
 
         [Theory, InlineData(float.MinValue), InlineData(float.MaxValue), InlineData(float.Epsilon),
@@ -177,8 +184,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -186,7 +194,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsFloat());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsFloat());
         }
 
         [Theory, InlineData(double.MinValue), InlineData(double.MaxValue), InlineData(double.Epsilon),
@@ -196,8 +204,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += cmd => Out.WriteLine($"WRITE> {cmd}");
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -205,7 +214,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsDouble());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsDouble());
         }
 
         [Theory, InlineData("Forty Two"), InlineData("English 日本語 русский язык 官話"), InlineData("🌄"),
@@ -214,8 +223,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
-            inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            inStream.CommandSend += msg => Out.WriteLine("SEND> " + msg);
+            var group = inStream.GetOrAddGroup("TestGroup");
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -223,7 +233,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsString());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsString());
         }
 
         [Theory, InlineData(new byte[] {byte.MinValue, byte.MaxValue, 42})]
@@ -231,8 +241,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -240,7 +251,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<byte>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<byte>());
         }
 
         [Theory, InlineData(new sbyte[] {sbyte.MinValue, sbyte.MaxValue, 42})]
@@ -248,8 +259,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -257,7 +269,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<sbyte>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<sbyte>());
         }
 
         [Theory, InlineData(new short[] {short.MinValue, short.MaxValue, 42, 0xFE, 0xFF})]
@@ -265,8 +277,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -274,7 +287,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<short>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<short>());
         }
 
         [Theory, InlineData(new ushort[] {ushort.MinValue, ushort.MaxValue, 42, 0xFE, 0xFF})]
@@ -282,8 +295,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -291,7 +305,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<ushort>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<ushort>());
         }
 
         [Theory, InlineData(new[] {int.MinValue, int.MaxValue, 42, 0xFE, 0xFF, 0xFFFE, 0xFFFF})]
@@ -299,8 +313,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -308,7 +323,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<int>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<int>());
         }
 
         [Theory, InlineData(new uint[] {uint.MinValue, uint.MaxValue, 42, 0xFE, 0xFF, 0xFFFE, 0xFFFF})]
@@ -316,8 +331,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -325,7 +341,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<uint>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<uint>());
         }
 
         [Theory,
@@ -337,8 +353,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -346,7 +363,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<long>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<long>());
         }
 
         [Theory,
@@ -358,8 +375,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -367,7 +385,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<ulong>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<ulong>());
         }
 
         [Theory,
@@ -380,8 +398,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -389,7 +408,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<float>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<float>());
         }
 
         [Theory,
@@ -402,8 +421,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -411,7 +431,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<double>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<double>());
         }
 
         [Theory, InlineData(new object[] {new[] {"Forty Two", "English 日本語 русский язык 官話", "🌄"}})]
@@ -419,8 +439,9 @@ namespace Ultz.DF2.Tests
         {
             using var s = new MemoryStream();
             using var inStream = new Df2Stream(s, StreamMode.Write, true);
+            var group = inStream.GetOrAddGroup("TestGroup");
             inStream.CommandSend += msg => Out.WriteLine("WRITE> " + msg);
-            inStream.AddOrUpdate("TestData", testData);
+            group.AddOrUpdate("TestData", testData);
             inStream.Flush();
             inStream.Close();
             Out.WriteLine($"Data: {Encoding.UTF8.GetString(s.ToArray())} ({BitConverter.ToString(s.ToArray())})");
@@ -428,7 +449,7 @@ namespace Ultz.DF2.Tests
             using var outStream = new Df2Stream(s, StreamMode.Read);
             outStream.CommandReceive += msg => Out.WriteLine("READ> " + msg);
             outStream.ProcessUntilEnd();
-            Assert.Equal(testData, outStream.Values["TestData"].AsArray<string>());
+            Assert.Equal(testData, outStream.Values["TestGroup"]["TestData"].AsArray<string>());
         }
     }
 }

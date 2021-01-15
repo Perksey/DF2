@@ -116,12 +116,6 @@ namespace Ultz.DF2
 
                     var previousPath = Df2Stream.GetFullPath("..", path);
                     var parentValue = _stream.GetValue(previousPath);
-                    if (parentValue is Value)
-                    {
-                        throw new InvalidOperationException(
-                            "The path to contain the group refers to a value instead of a group or the document root.");
-                    }
-
                     var parentGroupDictionary =
                         (ValueDictionary) (parentValue is null ? _stream.Values : ((Group) parentValue).Values);
                     parentGroupDictionary.Remove(Path.GetFileName(path));
