@@ -25,7 +25,8 @@ namespace Ultz.DF2
         /// <param name="keySelector">Selector function to create key from value</param>
         /// <param name="owner">The group that owns this value dictionary.</param>
         /// <param name="equalityComparer">The equality comparer to use when comparing keys, or null to use the default comparer.</param>
-        public ValueDictionary(Func<IValue, string> keySelector, IGroup owner, IEqualityComparer<string> equalityComparer = null)
+        public ValueDictionary(Func<IValue, string> keySelector, IGroup owner,
+            IEqualityComparer<string> equalityComparer = null)
         {
             KeySelector = keySelector ?? throw new ArgumentException(nameof(keySelector));
             Owner = owner;

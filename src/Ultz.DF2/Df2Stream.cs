@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -40,9 +41,11 @@ namespace Ultz.DF2
             Values = new ValueDictionary(x => x.Name, this);
         }
 
+#if DEBUG
         public event Action<string> CommandSend;
         public event Action<string> CommandReceive;
-        
+#endif
+
         public BinaryReader? BaseReader { get; }
         public BinaryWriter? BaseWriter { get; }
         public bool HasReceivedEnd { get; internal set; }
@@ -60,9 +63,10 @@ namespace Ultz.DF2
                 }
                 else
                 {
-                    Sender.SendGroup(GetRelativePath(value?.AbsolutePath ?? string.Empty, _outboundCurrentGroup?.AbsolutePath ?? "/"));
+                    Sender.SendGroup(GetRelativePath(value?.AbsolutePath ?? string.Empty,
+                        _outboundCurrentGroup?.AbsolutePath ?? "/"));
                 }
-                
+
                 _outboundCurrentGroup = value;
             }
         }
@@ -77,7 +81,7 @@ namespace Ultz.DF2
             {
                 throw new NotSupportedException("Base stream was read-only at time of creation.");
             }
-            
+
             if (HasReceivedEnd)
             {
                 throw new InvalidOperationException("Previously received end command, will not read any further.");
@@ -89,8 +93,8 @@ namespace Ultz.DF2
         public static string GetFullPath(string path, string relativeTo)
         {
             // TODO improve this, yuck
-            var baseSplit = relativeTo.Split(new []{"/"}, StringSplitOptions.RemoveEmptyEntries).ToList();
-            var pathSplit = path.Split(new[]{"/"}, StringSplitOptions.RemoveEmptyEntries);
+            var baseSplit = relativeTo.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).ToList();
+            var pathSplit = path.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries);
 
             if (baseSplit.Contains(".."))
             {
@@ -125,18 +129,20 @@ namespace Ultz.DF2
         public static string GetRelativePath(string path, string groupRelativeTo)
         {
             // TODO improve this, yuck
-            var baseSplit = groupRelativeTo.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
-            var pathSplit = path.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".").ToArray();
+            var baseSplit = groupRelativeTo.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries)
+                .Where(x => x != ".").ToArray();
+            var pathSplit = path.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries).Where(x => x != ".")
+                .ToArray();
             if (baseSplit.Contains(".."))
             {
                 throw new ArgumentException("Must be an absolute path", nameof(groupRelativeTo));
             }
-            
+
             if (pathSplit.Contains(".."))
             {
                 throw new ArgumentException("Must be an absolute path", nameof(pathSplit));
             }
-            
+
             var lastMatchingIndex = 0;
             for (; lastMatchingIndex < baseSplit.Length && lastMatchingIndex < pathSplit.Length; lastMatchingIndex++)
             {
@@ -178,6 +184,7 @@ namespace Ultz.DF2
         public void CopyTo(Df2Stream dest)
         {
             Write(this, dest);
+
             static void Write(IGroup srcGroup, IGroup destGroup)
             {
                 if (srcGroup.Handle is not null)
@@ -193,7 +200,7 @@ namespace Ultz.DF2
                     }
                     else
                     {
-                        var val = destGroup.AddOrUpdate(kvp.Key, ((Value)kvp.Value).Data);
+                        var val = destGroup.AddOrUpdate(kvp.Key, ((Value) kvp.Value).Data);
                         if (kvp.Value.Handle is not null)
                         {
                             val.Handle = kvp.Value.Handle.Value;
@@ -209,7 +216,7 @@ namespace Ultz.DF2
             {
                 throw new InvalidOperationException();
             }
-            
+
             Sender.SendEnd();
             BaseWriter.Flush();
         }
@@ -233,7 +240,7 @@ namespace Ultz.DF2
 
                 return group;
             }
-            
+
             var ret = new Group(this, name, true);
             ((ValueDictionary) Values).Add(ret);
             return ret;
@@ -701,7 +708,9 @@ namespace Ultz.DF2
 
         ValueKind IValue.Kind => ValueKind.Group;
 
+#if DEBUG
         internal void CoreSendEvent(string str) => CommandSend?.Invoke(str);
         internal void CoreReceiveEvent(string str) => CommandReceive?.Invoke(str);
+#endif
     }
 }

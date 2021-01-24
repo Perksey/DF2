@@ -8,7 +8,8 @@ using System.IO;
 
 namespace Ultz.DF2
 {
-    public class Group : IValue, IValueInternal, INotifyPropertyChanged, IGroup, IGroupInternal, INotifyCollectionChanged
+    public class Group : IValue, IValueInternal, INotifyPropertyChanged, IGroup, IGroupInternal,
+        INotifyCollectionChanged
     {
         private object _parent;
         private string _name;
@@ -39,7 +40,7 @@ namespace Ultz.DF2
             get => _handle;
             set
             {
-                var s = ((IGroupInternal)this).GetStream();
+                var s = ((IGroupInternal) this).GetStream();
                 if (_handle is not null && value is null)
                 {
                     s.Sender.SendHandle(string.Empty, _handle.Value);
@@ -98,7 +99,7 @@ namespace Ultz.DF2
 
                 return group;
             }
-            
+
             var ret = new Group(this, name, true);
             ((ValueDictionary) Values).Add(ret);
             return ret;
@@ -543,7 +544,7 @@ namespace Ultz.DF2
                 return false;
             }
 
-            ((IGroupInternal)this).GetStream().Sender.SendRemove(name);
+            ((IGroupInternal) this).GetStream().Sender.SendRemove(name);
             return true;
         }
 

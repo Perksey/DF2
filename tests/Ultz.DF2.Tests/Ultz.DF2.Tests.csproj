@@ -22,5 +22,14 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Ultz.DF2\Ultz.DF2.csproj" />
     </ItemGroup>
+    
+    <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+      <Compile Remove="*.cs" />
+      <Compile Include="RunInDebugModeNotReleaseMode.cs" />
+    </ItemGroup>
+    
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+      <Compile Remove="RunInDebugModeNotReleaseMode.cs" />
+    </ItemGroup>
 
 </Project>

@@ -20,21 +20,25 @@ namespace Ultz.DF2
             {
                 throw new NotSupportedException("Stream is not configured for reading");
             }
-            
+
             var cmd = (Command) _stream.BaseReader!.ReadByte();
             switch (cmd)
             {
                 case Command.End:
                 {
                     _stream.HasReceivedEnd = true;
+#if DEBUG
                     _stream.CoreReceiveEvent("End;");
+#endif
                     return false;
                 }
                 case Command.Group:
                 {
                     var path = Df2Stream.GetFullPath(_stream.BaseReader.ReadDf2String(),
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/");
+#if DEBUG
                     _stream.CoreReceiveEvent($"Group ({path});");
+#endif
                     if (string.IsNullOrWhiteSpace(path))
                     {
                         if (path == string.Empty)
@@ -94,12 +98,14 @@ namespace Ultz.DF2
                     }
                     else
                     {
-                        currentDictionary.Add(new Value((IGroupInternal)parentValue ?? _stream, name, kind,
+                        currentDictionary.Add(new Value((IGroupInternal) parentValue ?? _stream, name, kind,
                             recv.Item3 = ReadValue(kind, out _)));
                     }
 
+#if DEBUG
                     _stream.CoreReceiveEvent(
                         $"Value {recv.Item1} ({recv.Item2}) ({Helpers.CoreToString(recv.Item3)});");
+#endif
 
                     break;
                 }
@@ -111,8 +117,10 @@ namespace Ultz.DF2
                     {
                         throw new InvalidOperationException("Path should not be null or whitespace");
                     }
-                    
+
+#if DEBUG
                     _stream.CoreReceiveEvent($"Remove ({path});");
+#endif
 
                     var previousPath = Df2Stream.GetFullPath("..", path);
                     var parentValue = _stream.GetValue(previousPath);
@@ -129,7 +137,7 @@ namespace Ultz.DF2
                         ((IDictionary<uint, IValue>) _stream.Handles).Remove(_stream.BaseReader.ReadDf2UInt());
                         break;
                     }
-                    
+
                     var path = Df2Stream.GetFullPath(rawPath,
                         _stream.InboundCurrentGroup?.AbsolutePath ?? "/").TrimEnd('/');
 
@@ -140,9 +148,11 @@ namespace Ultz.DF2
                     }
 
                     uint handle;
-                    ((IValueInternal)value).UpdateHandle(handle = _stream.BaseReader.ReadDf2UInt());
+                    ((IValueInternal) value).UpdateHandle(handle = _stream.BaseReader.ReadDf2UInt());
                     ((IDictionary<uint, IValue>) _stream.Handles).Add(handle, value);
+#if DEBUG
                     _stream.CoreReceiveEvent($"Handle ({path}) {handle};");
+#endif
                     break;
                 }
                 case Command.EditValueByHandle:
@@ -156,7 +166,9 @@ namespace Ultz.DF2
 
                     object read;
                     value.UpdateValue(val.Kind, read = ReadValue(val.Kind, out _));
+#if DEBUG
                     _stream.CoreReceiveEvent($"EditValueByHandle {handle} ({Helpers.CoreToString(read)});");
+#endif
                     break;
                 }
                 case Command.GroupByHandle:
@@ -169,7 +181,9 @@ namespace Ultz.DF2
                     }
 
                     _stream.InboundCurrentGroup = value;
+#if DEBUG
                     _stream.CoreReceiveEvent($"GroupByHandle {handle};");
+#endif
                     break;
                 }
                 default:

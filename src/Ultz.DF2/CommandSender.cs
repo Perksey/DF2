@@ -13,17 +13,20 @@ namespace Ultz.DF2
         {
             _stream = stream;
         }
-        
+
         public void SendEnd()
         {
             if (_stream.BaseWriter is null)
             {
                 return;
             }
-            
+
+#if DEBUG
             _stream.CoreSendEvent("End;");
+#endif
             _stream.BaseWriter!.Write((byte) Command.End);
         }
+
         public void SendGroup(string path)
         {
             if (_stream.BaseWriter is null)
@@ -35,8 +38,10 @@ namespace Ultz.DF2
             {
                 throw new ArgumentNullException(nameof(path));
             }
-            
+
+#if DEBUG
             _stream.CoreSendEvent($"Group ({path});");
+#endif
             _stream.BaseWriter!.Write((byte) Command.Group);
             _stream.BaseWriter!.WriteDf2String(path);
         }
@@ -50,7 +55,9 @@ namespace Ultz.DF2
             }
 
             CoreSendValue(name, value, out valueKind);
+#if DEBUG
             _stream.CoreSendEvent($"Value {valueKind} ({name}) ({Helpers.CoreToString(value)});");
+#endif
         }
 
         private void CoreSendValue(string name,
@@ -66,7 +73,7 @@ namespace Ultz.DF2
                 valueKind = ValueKind.Null;
                 return;
             }
-            
+
             valueKind = default;
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -103,7 +110,7 @@ namespace Ultz.DF2
                     "uint, long, ulong, float, double, string, an array of one of the aforementioned types, or " +
                     "IEnumerable");
             }
-            
+
             if (value is byte byteValue)
             {
                 Assert(forceValue, ValueKind.Byte);
@@ -111,9 +118,9 @@ namespace Ultz.DF2
 
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Byte));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Byte));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter!.WriteDf2String(name);
@@ -128,9 +135,9 @@ namespace Ultz.DF2
 
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.SByte));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.SByte));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -142,12 +149,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.Short);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Short));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Short));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -159,12 +166,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.UShort);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.UShort));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.UShort));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -176,12 +183,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.Int);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Int));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Int));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -193,12 +200,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.UInt);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.UInt));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.UInt));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -213,43 +220,43 @@ namespace Ultz.DF2
 
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Long));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Long));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
                 }
-                
+
                 _stream.BaseWriter!.WriteDf2Int64(longValue);
             }
             else if (value is ulong ulongValue)
             {
                 Assert(forceValue, ValueKind.ULong);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.ULong));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.ULong));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
                 }
-                
+
                 _stream.BaseWriter!.WriteDf2UInt64(ulongValue);
             }
             else if (value is float floatValue)
             {
                 Assert(forceValue, ValueKind.Float);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Float));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Float));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -261,12 +268,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.Double);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Double));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Double));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -278,12 +285,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.String);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.String));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.String));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -295,12 +302,12 @@ namespace Ultz.DF2
             {
                 Assert(forceValue, ValueKind.Array);
                 WriteValueCommand(_stream, handle, commandName);
-                
+
                 if (kind)
                 {
-                    _stream.BaseWriter!.Write((byte)(valueKind = ValueKind.Array));
+                    _stream.BaseWriter!.Write((byte) (valueKind = ValueKind.Array));
                 }
-                
+
                 if (commandName)
                 {
                     _stream.BaseWriter.WriteDf2String(name);
@@ -321,8 +328,8 @@ namespace Ultz.DF2
                     _ when arrayValue.GetType() == typeof(string[]) => ValueKind.String,
                     _ => throw new InvalidOperationException("Invalid array type")
                 };
-                
-                _stream.BaseWriter!.Write((byte)arrayKind);
+
+                _stream.BaseWriter!.Write((byte) arrayKind);
                 _stream.BaseWriter!.WriteDf2UInt((uint) arrayValue.Length);
                 foreach (var obj in arrayValue)
                 {
@@ -374,17 +381,21 @@ namespace Ultz.DF2
                 }
             }
         }
+
         public void SendRemove(string name)
         {
             if (_stream.BaseWriter is null)
             {
                 return;
             }
-            
+
             _stream.BaseWriter!.Write((byte) Command.Remove);
             _stream.BaseWriter!.WriteDf2String(name);
+#if DEBUG
             _stream.CoreSendEvent($"Remove ({name});");
+#endif
         }
+
         public void SendHandle(string path, uint handle)
         {
             if (_stream.BaseWriter is null)
@@ -395,8 +406,11 @@ namespace Ultz.DF2
             _stream.BaseWriter!.Write((byte) Command.Handle);
             _stream.BaseWriter!.WriteDf2String(path);
             _stream.BaseWriter!.WriteDf2UInt(handle);
+#if DEBUG
             _stream.CoreSendEvent($"Handle ({path}) {handle};");
+#endif
         }
+
         public void SendEditValueByHandle(uint handle,
             ValueKind currentKind,
             object value,
@@ -422,15 +436,18 @@ namespace Ultz.DF2
                 {
                     throw;
                 }
-                
+
                 // fallback to send value
                 SendValue(fallbackPath, value, out kind);
             }
 
+#if DEBUG
             _stream.CoreSendEvent(usedHandle
                 ? $"EditValueByHandle {handle} ({value});"
                 : $"Value {kind} ({fallbackPath}) ({value});");
+#endif
         }
+
         public void SendGroupByHandle(uint handle)
         {
             if (_stream.BaseWriter is null)
@@ -438,7 +455,9 @@ namespace Ultz.DF2
                 return;
             }
 
+#if DEBUG
             _stream.CoreSendEvent($"GroupByHandle {handle};");
+#endif
             _stream.BaseWriter!.Write((byte) Command.GroupByHandle);
             _stream.BaseWriter!.WriteDf2UInt(handle);
         }
