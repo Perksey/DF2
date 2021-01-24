@@ -1,0 +1,17 @@
+<Project>
+    <PropertyGroup>
+        <Authors>Ultz Limited</Authors>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReleaseNotes>
+            Alpha 2
+            
+            - Remove debugging functionality (except in Debug mode, which is never the case as DF2 is always Release)
+            - Use compressed-length-preceded strings instead of null-terminated strings
+        </PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/Ultz/DF2</PackageProjectUrl>
+        <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
+        <VersionPrefix>1.0.0</VersionPrefix>
+        <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha2</VersionSuffix>
+    </PropertyGroup>
+</Project>

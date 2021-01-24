@@ -29,6 +29,7 @@ namespace Ultz.DF2
         Value AddOrUpdate(string name, double[] val);
         Value AddOrUpdate(string name, string[] val);
         Value AddOrUpdate(string name, IEnumerable val);
+        Value AddOrUpdate(string name, object val);
         bool Remove(string name);
     }
 }

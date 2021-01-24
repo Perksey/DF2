@@ -5,5 +5,6 @@ namespace Ultz.DF2
 {
     public interface IValueDictionary : IReadOnlyDictionary<string, IValue>, INotifyCollectionChanged
     {
+        IGroup Owner { get; }
     }
 }

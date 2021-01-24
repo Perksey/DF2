@@ -4,9 +4,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6E40298E-C40
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ultz.DF2", "src\Ultz.DF2\Ultz.DF2.csproj", "{C9C682E9-375E-4CC5-86A2-B4EAAF9A83D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ultz.DF2.Tests", "src\Ultz.DF2.Tests\Ultz.DF2.Tests.csproj", "{D91040D5-921A-41BB-918F-A68F3D490031}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ultz.DF2.Tests", "tests\Ultz.DF2.Tests\Ultz.DF2.Tests.csproj", "{D91040D5-921A-41BB-918F-A68F3D490031}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "src\Playground\Playground.csproj", "{CD01BCBF-246D-4EEC-B51A-46A67E4741C6}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "props", "props", "{7C6B7951-BA61-4311-8A91-5476DCCE9B5C}"
+ProjectSection(SolutionItems) = preProject
+	Directory.Build.props = Directory.Build.props
+	Directory.Build.targets = Directory.Build.targets
+EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BD902AD7-0F8D-4E53-895B-4272546A4A57}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "build", "build\build.csproj", "{1391EBBC-E9A9-4263-B306-4ADE37E2C3E0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +23,11 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C9C682E9-375E-4CC5-86A2-B4EAAF9A83D0} = {6E40298E-C403-4163-9E67-DFA0E18A3505}
-		{D91040D5-921A-41BB-918F-A68F3D490031} = {6E40298E-C403-4163-9E67-DFA0E18A3505}
-		{CD01BCBF-246D-4EEC-B51A-46A67E4741C6} = {6E40298E-C403-4163-9E67-DFA0E18A3505}
+		{D91040D5-921A-41BB-918F-A68F3D490031} = {BD902AD7-0F8D-4E53-895B-4272546A4A57}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1391EBBC-E9A9-4263-B306-4ADE37E2C3E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1391EBBC-E9A9-4263-B306-4ADE37E2C3E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9C682E9-375E-4CC5-86A2-B4EAAF9A83D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C9C682E9-375E-4CC5-86A2-B4EAAF9A83D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9C682E9-375E-4CC5-86A2-B4EAAF9A83D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -27,9 +36,5 @@ Global
 		{D91040D5-921A-41BB-918F-A68F3D490031}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D91040D5-921A-41BB-918F-A68F3D490031}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D91040D5-921A-41BB-918F-A68F3D490031}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CD01BCBF-246D-4EEC-B51A-46A67E4741C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CD01BCBF-246D-4EEC-B51A-46A67E4741C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CD01BCBF-246D-4EEC-B51A-46A67E4741C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CD01BCBF-246D-4EEC-B51A-46A67E4741C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

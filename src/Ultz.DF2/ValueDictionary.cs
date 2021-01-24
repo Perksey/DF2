@@ -23,10 +23,13 @@ namespace Ultz.DF2
         /// Create new ObservableDictionary
         /// </summary>
         /// <param name="keySelector">Selector function to create key from value</param>
+        /// <param name="owner">The group that owns this value dictionary.</param>
         /// <param name="equalityComparer">The equality comparer to use when comparing keys, or null to use the default comparer.</param>
-        public ValueDictionary(Func<IValue, string> keySelector, IEqualityComparer<string> equalityComparer = null)
+        public ValueDictionary(Func<IValue, string> keySelector, IGroup owner,
+            IEqualityComparer<string> equalityComparer = null)
         {
             KeySelector = keySelector ?? throw new ArgumentException(nameof(keySelector));
+            Owner = owner;
             Indices = new Dictionary<string, int>(equalityComparer);
         }
 
@@ -235,5 +238,7 @@ namespace Ultz.DF2
         }
 
         #endregion
+
+        public IGroup Owner { get; }
     }
 }
