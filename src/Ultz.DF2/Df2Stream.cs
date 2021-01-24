@@ -171,6 +171,7 @@ namespace Ultz.DF2
 
             s.Seek(0, SeekOrigin.Begin);
             s.SetLength(0);
+            s.Write(Preface.RawPreface, 0, Preface.RawPreface.Length);
             CopyTo(this);
         }
 

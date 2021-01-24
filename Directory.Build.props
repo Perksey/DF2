@@ -1,0 +1,12 @@
+<Project>
+    <PropertyGroup>
+        <Authors>Ultz Limited</Authors>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReleaseNotes>Initial 1.0 release.</PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/Ultz/DF2</PackageProjectUrl>
+        <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
+        <VersionPrefix>1.0.0</VersionPrefix>
+        <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha1</VersionSuffix>
+    </PropertyGroup>
+</Project>

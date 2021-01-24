@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Ultz.DF2\Ultz.DF2.csproj" />
+      <ProjectReference Include="..\..\src\Ultz.DF2\Ultz.DF2.csproj" />
     </ItemGroup>
 
 </Project>
