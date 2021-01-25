@@ -73,7 +73,10 @@ namespace Ultz.DF2
 
         internal CommandReceiver Receiver { get; }
         internal CommandSender Sender { get; }
-        public IReadOnlyDictionary<uint, IValue> Handles { get; } = new Dictionary<uint, IValue>();
+
+        // Concrete type to allow devirt of interface calls 
+        private Dictionary<uint, IValue> _handles = new Dictionary<uint, IValue>();
+        public IReadOnlyDictionary<uint, IValue> Handles => _handles;
 
         public bool ProcessCommand()
         {
@@ -708,9 +711,17 @@ namespace Ultz.DF2
 
         ValueKind IValue.Kind => ValueKind.Group;
 
+        [Conditional("DEBUG")]
+        internal void CoreSendEvent(string str)
 #if DEBUG
-        internal void CoreSendEvent(string str) => CommandSend?.Invoke(str);
-        internal void CoreReceiveEvent(string str) => CommandReceive?.Invoke(str);
+            => CommandSend?.Invoke(str);
 #endif
+        [Conditional("DEBUG")]
+        internal void CoreReceiveEvent(string str)
+#if DEBUG
+            => CommandReceive?.Invoke(str);
+#endif
+
+
     }
 }
