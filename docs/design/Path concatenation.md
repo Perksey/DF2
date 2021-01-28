@@ -21,7 +21,7 @@ Two _segments_ are equal if all their _chars_ are equal, except for _skip segmen
 DF2 _paths_ are sequences of _segments_ and _separators_. It is illegal for two _segments_ to follow each other. Two _separators_ that have no _chars_ between them are treated as a _separator_-_skip segment_-_separator_ triplet.
 
 Three types of _paths_ represent subsets of the above definition:
-- _Normalized paths_ have no _skip segments_ in them and always start with a _segment_ and end with a _separator_.
+- _Normalized paths_ have no _skip segments_ in them and always start with a _separator_ and end with a _segment_.
 
 [Rationale: it is expected that most implementations will choose to normalize the paths as they enter the process, and work with normalized paths in memory due their superior performance characteristics. The restriction on the start and end of the normalized path are to ensure they always have the same number of _segments_ as they have _separators_, which simplifies the implementation of concatenation functions.]
 
