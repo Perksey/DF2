@@ -4,18 +4,31 @@ It is expected that the use of paths in DF2 (similar in nature to Unix file path
 
 ## Definitions
 
-Fundamentally, DF2 _paths_ are _strings_ that consist of _segments_ that are separated by _separators_. Two _paths_ are equal if all their _segments_ are equal. _Paths_ can have both _trailing_ and _leading_ _separators_.
+_Char_ is a Unicode code point. There are special _chars_ which have specific meaning in DF2 paths:
+- _Separator_ is a _char_ corresponding to the code point `U+002F` - `Slash`.
+- _Dot_ is a _char_ corresponding to the code point `U+002E` - `Full stop`.
 
-_Strings_ are arrays of `char`s that are interpreted as UTF-16 encoded character sequences and have a trailing zero `char`. _Strings_ do not need to be valid UTF-16.
+Two _chars_ are equal if they refer to the same code point.
 
-_Segments_ are _strings_ without the trailing zero-byte. _Segments_ cannot have _separators_ in them. There are special _segments_ which have specific meaning in DF2 paths:
-- _Skip segment_ is a _segment_ 1 `char` in length, this `char` being a dot: `.`.
-- _Backtrack segment_ is a _segment_ 2 `char`s in length, those being two dots: `..`.
-- _Empty segment_ is a _segment_ 0 `char`s in length.
+[Rationale: to support the performance of concatenation functions, it is neccessary to impose the restriction that equality comparisons be strictly ordinal.]
 
-Two _segments_ are equal if all their `char`s are bitwise-equal. _Empty segments_ are only equal to each other.
+_Segments_ are sequences of _chars_ that have no _separators_ in them. There are special _segments_ which have specific meaning in DF2 paths:
+- _Skip segment_ is a _segment_ that consists of one _dot_ or has no _chars_ at all.
+- _Backtrack segment_ is a _segment_ that consists of two _dots_.
 
-_Separators_ are `char`s equal to the forward slash: `/`.
+Two _segments_ are equal if all their _chars_ are equal, except for _skip segments_, which are always equal to each other.
+
+DF2 _paths_ are sequences of _segments_ and _separators_. It is illegal for two _segments_ to follow each other. Two _separators_ that have no _chars_ between them are treated as a _separator_-_skip segment_-_separator_ triplet.
+
+Three types of _paths_ represent subsets of the above definition:
+- _Normalized paths_ have no _skip segments_ in them and always start with a _segment_ and end with a _separator_.
+
+[Rationale: it is expected that most implementations will choose to normalize the paths as they enter the process, and work with normalized paths in memory due their superior performance characteristics. The restriction on the start and end of the normalized path are to ensure they always have the same number of _segments_ as they have _separators_, which simplifies the implementation of concatenation functions.]
+
+- _Absolute paths_ are _normalized paths_ that have no _backtrack segments_.
+- _Relative paths_ are _normalized paths_ that can only have _backtrack segments_ at the beginning of the _path_.
+
+[Rationale: the concatenation functions operate on _relative_ and _absolute paths_. Defining them explicitly allows the implementation to not validate the implicit assumption these functions will have to make about their inputs. The restriction of _backtrack segments_ only being legal at the start of a _relative path_ is there to support the simplicity of implementation, both that of the validation and concatenation.]
 
 ## `GetFullPath` specification
 
@@ -27,7 +40,7 @@ TBD
 
 ## Performance
 
-When working on any algorithm, it is critical that data used in benchmarks reflects real-world. This is because performance of modern CPUs hinges critically on how predictable the input data is. It is thus essential to tune the algorithm to branch in predictable patterns.
+When working on any algorithm, it is critical that data used in benchmarks reflects the real world. This is because performance of modern CPUs hinges critically on how predictable the input data is. It is thus essential to tune the algorithm to branch in predictable patterns.
 
 As an illustration, this benchmark of a prototype implementation of `GetFullPath` illustrates the differences between predictable and unpredictable (data-dependent) control flow:
 ![image](https://user-images.githubusercontent.com/62474226/104724925-6e9a5c00-5742-11eb-963b-d19859d5465a.png)
