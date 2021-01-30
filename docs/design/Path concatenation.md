@@ -32,7 +32,12 @@ Three types of _paths_ represent subsets of the above definition:
 
 ## `GetFullPath` specification
 
-TBD
+`GetFullPath` is a function with two parameters: `appendPath`, which is a _relative path_, and `basePath`, which is an _absolute path_. The result of this funtion is an _absolute path_ or an error, whichever is determined by the following algorithm:
+
+1. Count the number of _backtrack segments_ in `appendPath`.
+2. Delete as many _segments_ in `basePath`, starting from the end. If the operation cannot be performed due to `basePath` not having enough _segments_, return with error.
+3. Normalize `basePath`.
+4. Return the result as the sequence of all _chars_ in the `basePath` followed by all _chars_ in the `appendPath`.
 
 ## `GetRelativePath` specification
 
