@@ -52,7 +52,13 @@ Three types of _paths_ represent subsets of the above definition:
 
 ## `GetRelativePath` specification
 
-TBD
+`GetRelativePath` is a function with two parameters: `path`, which is an _absolute path_, and `basePath`, which is also an _absolutePath_. The result of this function is a _relative path_, determined by an algorithm equivalent to the following:
+
+1. If the _segments_ at the start of `path` and `basePath` are equal, delete them from both with the preceding separators.
+2. Repeat step 1 until the _segements_ at the start of each path are no longer equal.
+3. Count the number of segments in `basePath`.
+4. Prepend that number of _separators_ and _backtrack segments_, alternating between the two and starting with a _separator_, to `path`.
+5. Return the result of the above modifications to `path`.
 
 ## Performance
 
