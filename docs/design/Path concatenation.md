@@ -48,7 +48,9 @@ Three types of _paths_ represent subsets of the above definition:
 1. Count the number of _backtrack segments_ in `appendPath`.
 2. Delete as many _segments_ in `basePath`, starting from the end. If the operation cannot be performed due to `basePath` not having enough _segments_, return with error.
 3. _Normalize_ `basePath`.
-4. Return the result as the sequence of all _chars_ in the `basePath` followed by all _chars_ in the `appendPath`.
+4. Delete all _backtrack segments_ from `appendPath`.
+5. _Normalize_ `appendPath`.
+6. Return the result as the sequence of all _chars_ in the `basePath` followed by all _chars_ in the `appendPath`.
 
 ## `GetRelativePath` specification
 
